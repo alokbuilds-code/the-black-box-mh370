@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE BLACK BOX — How a Plane Disappears | MH370 Investigation</title>
+  <meta name="description" content="A cinematic, sky-based aviation investigation and intelligence archive on the disappearance of Malaysia Airlines Flight MH370. Grounded in official ATSB, MOT, and forensic evidence.">
+  <meta name="theme-color" content="#020711">
+
+  <!-- Open Graph / Meta -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="THE BLACK BOX — How a Plane Disappears">
+  <meta property="og:description" content="A cinematic, night-sky investigation into the mystery of Malaysia Airlines Flight MH370.">
+  <meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/0/0e/9M-MRO_Boeing_777_Malaysia_Airlines_October_2013.jpg">
+
+  <!-- Google Fonts: Editorial Serif + Technical Monospace + Clean UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS for Dark Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <!-- FontAwesome for investigative icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-night-sky">
+
+  <!-- Atmospheric Sky Canvas Layer (Stars, High-Altitude Clouds & Horizon Glow) -->
+  <div class="sky-canvas-backdrop" aria-hidden="true">
+    <canvas id="skyStarCanvas"></canvas>
+    <div class="sky-horizon-glow"></div>
+    <div class="sky-cloud-layer far-clouds"></div>
+    <div class="sky-cloud-layer mid-clouds"></div>
+    <div class="sky-cloud-layer near-clouds"></div>
+    <div class="flight-corridor-guide" id="flightCorridorGuide"></div>
+  </div>
+
+  <!-- Custom Celestial/Radar Reticle Cursor for Desktop -->
+  <div class="custom-cursor" id="customCursor" aria-hidden="true">
+    <div class="cursor-crosshair horizontal"></div>
+    <div class="cursor-crosshair vertical"></div>
+    <div class="cursor-ring"></div>
+    <div class="cursor-telemetry" id="cursorTelemetry">FL350 &bull; 00.000°N 00.000°E</div>
+  </div>
+
+  <!-- Minimal Audio Synthesizer Toggle Bar -->
+  <aside class="ambient-audio-bar" aria-label="Aviation Interface Audio">
+    <button type="button" class="audio-btn" id="audioToggleBtn" title="Toggle Cockpit & Radar Interface Sounds (Synthesized Web Audio)" aria-pressed="false">
+      <span class="strobe-pulse" id="audioPulse"></span>
+      <i class="fa-solid fa-volume-xmark" id="audioIcon"></i>
+      <span class="audio-text">VHF AUDIO: <strong id="audioStatus">MUTED</strong></span>
+    </button>
+    <div class="utc-clock" id="systemUtcClock">00:00:00 UTC</div>
+  </aside>
+
+  <!-- SIDE TECHNICAL DATA RAIL (DESKTOP) -->
+  <aside class="side-data-rail" id="sideDataRail" aria-label="Telemetry HUD">
+    <div class="rail-header">
+      <span class="rail-blip"></span>
+      <span class="rail-tag">HUD RECON</span>
+    </div>
+    <div class="rail-telemetry-stack">
+      <div class="rail-group">
+        <span class="r-lbl">CASE FILE</span>
+        <span class="r-val" id="railCaseVal">MH370 / 2014</span>
+      </div>
+      <div class="rail-group">
+        <span class="r-lbl">AIRFRAME</span>
+        <span class="r-val">9M-MRO (B777)</span>
+      </div>
+      <div class="rail-group">
+        <span class="r-lbl">SIGNAL</span>
+        <span class="r-val text-red" id="railSignalVal">TRANSPONDER: OFF</span>
+      </div>
+      <div class="rail-group">
+        <span class="r-lbl">RADAR MODE</span>
+        <span class="r-val text-amber" id="railRadarVal">PRIMARY (PSR)</span>
+      </div>
+      <div class="rail-group">
+        <span class="r-lbl">EST. POSITION</span>
+        <span class="r-val" id="railPosVal">7TH ARC / SIO</span>
+      </div>
+      <div class="rail-group">
+        <span class="r-lbl">STATUS</span>
+        <span class="r-val text-unlocated" id="railStatusVal">UNLOCATED</span>
+      </div>
+    </div>
+    <div class="rail-footer">
+      <span class="rail-barometer">ICAO ANNEX 13</span>
+    </div>
+  </aside>
+
+  <!-- SCREEN 1: PRELOADER (AIRCRAFT RADAR INITIALIZATION) -->
+  <div class="sky-preloader" id="caseLoader">
+    <div class="loader-inner">
+      <div class="loader-radar-ping"></div>
+      <div class="loader-beacon-light"></div>
+      <h1 class="loader-brand">THE BLACK BOX</h1>
+      <p class="loader-sub">HOW A PLANE DISAPPEARS</p>
+      
+      <div class="loader-status-box">
+        <div class="loader-log" id="loaderLogLine">ACQUIRING STRATOSPHERIC TELEMETRY...</div>
+        <div class="loader-progress-track">
+          <div class="loader-progress-bar" id="loaderBar"></div>
+        </div>
+        <div class="loader-indices">
+          <span>MALAYSIA AIRLINES FLIGHT 370</span>
+          <span id="loaderPercent">0%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIXED CINEMATIC NAVIGATION (DOCUMENTARY CHAPTER SYSTEM) -->
+  <header class="cinematic-nav-header" id="globalHeader">
+    <div class="nav-left">
+      <a href="#hero" class="nav-brand">
+        <span class="nav-strobe"></span>
+        <span class="nav-title">THE BLACK BOX</span>
+      </a>
+      <span class="nav-case-tag">CASE: MH370 [OPEN]</span>
+    </div>
+
+    <!-- Live Chapter Indicator -->
+    <div class="nav-chapter-indicator" id="navChapterIndicator">
+      <span class="chap-num" id="currentChapterNum">01 / 12</span>
+      <span class="chap-divider">&bull;</span>
+      <span class="chap-name" id="currentChapterName">THE NIGHT SKY</span>
+    </div>
+
+    <div class="nav-right">
+      <button type="button" class="nav-menu-btn" id="menuToggleBtn" aria-label="Open investigation directory">
+        <span class="menu-label">CHAPTERS</span>
+        <span class="menu-bars">
+          <span class="b-line"></span>
+          <span class="b-line"></span>
+        </span>
+      </button>
+    </div>
+
+    <!-- Thin Top Progress Bar -->
+    <div class="nav-scroll-progress" id="navScrollProgress"></div>
+  </header>
+
+  <!-- FULLSCREEN CHAPTER DIRECTORY MODAL -->
+  <div class="chapter-directory-modal" id="chapterModal" aria-hidden="true">
+    <div class="modal-backdrop-haze"></div>
+    <div class="directory-inner">
+      <div class="directory-top">
+        <div class="dir-title-box">
+          <span class="mono-label">INVESTIGATION DIRECTORY</span>
+          <h2>TABLE OF CHAPTERS</h2>
+        </div>
+        <button type="button" class="btn-close-directory" id="closeDirBtn" aria-label="Close directory">&times;</button>
+      </div>
+
+      <div class="directory-grid">
+        <ul class="directory-col">
+          <li><a href="#hero" class="dir-link"><span class="d-num">01</span><span class="d-name">THE NIGHT FLIGHT</span><span class="d-meta">00:41 MYT</span></a></li>
+          <li><a href="#case" class="dir-link"><span class="d-num">02</span><span class="d-name">THE CASE FILE</span><span class="d-meta">239 SOULS</span></a></li>
+          <li><a href="#flight" class="dir-link"><span class="d-num">03</span><span class="d-name">THE SCHEDULED ROUTE</span><span class="d-meta">AIRWAY M770</span></a></li>
+          <li><a href="#last90" class="dir-link"><span class="d-num">04</span><span class="d-name">THE LAST 90 MINUTES</span><span class="d-meta">TIMELINE</span></a></li>
+          <li><a href="#radar" class="dir-link"><span class="d-num">05</span><span class="d-name">PRIMARY RADAR</span><span class="d-meta">RMAF TRACK</span></a></li>
+          <li><a href="#turn" class="dir-link"><span class="d-num">06</span><span class="d-name">THE AIRSPACE TURN</span><span class="d-meta">WAYPOINT IGARI</span></a></li>
+        </ul>
+        <ul class="directory-col">
+          <li><a href="#satellite" class="dir-link"><span class="d-num">07</span><span class="d-name">THE 7TH SATELLITE ARC</span><span class="d-meta">INMARSAT BTO</span></a></li>
+          <li><a href="#ocean" class="dir-link"><span class="d-num">08</span><span class="d-name">THE SOUTHERN OCEAN</span><span class="d-meta">-6,000 METERS</span></a></li>
+          <li><a href="#debris" class="dir-link"><span class="d-num">09</span><span class="d-name">THE PIECES THAT SURFACED</span><span class="d-meta">FLAPERON</span></a></li>
+          <li><a href="#search" class="dir-link"><span class="d-num">10</span><span class="d-name">UNDERWATER SEARCH</span><span class="d-meta">120,000 KM²</span></a></li>
+          <li><a href="#evidence" class="dir-link"><span class="d-num">11</span><span class="d-name">EVIDENCE ROOM &amp; PILOT</span><span class="d-meta">15 ITEMS</span></a></li>
+          <li><a href="#matrix" class="dir-link"><span class="d-num">12</span><span class="d-name">THEORY MATRIX &amp; WHAT WE KNOW</span><span class="d-meta">OPEN FILE</span></a></li>
+        </ul>
+      </div>
+
+      <div class="directory-footer">
+        <span>ICAO CASE NO. MAS-370-2014 &bull; OFFICIAL ACCIDENT ARCHIVE</span>
+        <span>A CASE WITHOUT A FINAL LOCATION</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CINEMATIC EXPERIENCE -->
+  <main id="mainExperience">
+
+    <!-- 01. CHAPTER: THE NIGHT SKY HERO & DISAPPEARANCE EVENT -->
+    <section class="chapter-hero" id="hero" data-chapter="01" data-chapter-name="THE NIGHT SKY">
+      <!-- Distant Moving Aircraft Beacon in the Sky -->
+      <div class="distant-aircraft-light" id="distantAircraft" aria-hidden="true">
+        <div class="strobe red-nav"></div>
+        <div class="strobe white-anticollision"></div>
+        <div class="strobe green-nav"></div>
+        <div class="aircraft-glow"></div>
+        <div class="aircraft-tag" id="aircraftTag">MAS370 &bull; FL350</div>
+      </div>
+
+      <!-- Radar Disappearance Shockwave Pulse -->
+      <div class="radar-loss-pulse" id="radarLossPulse" aria-hidden="true"></div>
+
+      <!-- Cinematic Typography Overlay -->
+      <div class="hero-atmosphere-content">
+        <div class="hero-sequence-container" id="heroSequence">
+          <!-- Step 1 -->
+          <div class="hero-beat active" data-step="1">
+            <span class="beat-timecode">08 MARCH 2014 &bull; 00:41:43 MYT</span>
+            <h1 class="beat-headline">FLIGHT 370</h1>
+            <p class="beat-caption">DEPARTED KUALA LUMPUR FOR BEIJING INTO A CLEAR NIGHT SKY.</p>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="hero-beat" data-step="2">
+            <span class="beat-timecode">01:19:30 MYT</span>
+            <h2 class="beat-headline">"GOOD NIGHT MALAYSIAN THREE SEVEN ZERO."</h2>
+            <p class="beat-caption">THE FINAL VOICE TRANSMISSION BEFORE REACHING HO CHI MINH AIRSPACE.</p>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="hero-beat" data-step="3">
+            <span class="beat-timecode text-red">01:21:13 MYT</span>
+            <h2 class="beat-headline text-loss">THE AIRCRAFT DISAPPEARED.</h2>
+            <div class="beat-pills">
+              <span class="pill pill-loss">TRANSPONDER DROPPED</span>
+              <span class="pill pill-radar">RADAR LOST</span>
+              <span class="pill pill-sat">SATELLITE DATA REMAINED</span>
+            </div>
+          </div>
+
+          <!-- Step 4: Grand Title Reveal -->
+          <div class="hero-beat" data-step="4">
+            <div class="title-monolith">
+              <span class="monolith-kicker">AN INVESTIGATION INTO AVIATION'S GREATEST MYSTERY</span>
+              <h1 class="monolith-main-title">THE BLACK BOX</h1>
+              <p class="monolith-subtitle">HOW A PLANE DISAPPEARS</p>
+              
+              <div class="monolith-specs-strip">
+                <div class="spec-cell"><span class="lbl">AIRCRAFT</span> 9M-MRO (BOEING 777-200ER)</div>
+                <div class="spec-cell"><span class="lbl">SOULS</span> 227 PASSENGERS &bull; 12 CREW</div>
+                <div class="spec-cell"><span class="lbl">LAST RADAR</span> 02:22 MYT (ANDAMAN SEA)</div>
+                <div class="spec-cell"><span class="lbl">FINAL HANDSHAKE</span> 08:19 MYT (7TH ARC)</div>
+              </div>
+
+              <div class="hero-actions">
+                <a href="#case" class="btn-hero-primary"><i class="fa-solid fa-compass"></i> ENTER THE INVESTIGATION</a>
+                <a href="#flight" class="btn-hero-ghost"><i class="fa-solid fa-plane"></i> RECONSTRUCT FLIGHT ROUTE</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scroll Indicator Hint -->
+        <div class="sky-scroll-prompt">
+          <span class="prompt-text">SCROLL TO DESCEND INTO THE INVESTIGATION</span>
+          <div class="prompt-line">
+            <span class="prompt-blip"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real Aircraft Reference Card (Authentic 9M-MRO Image) -->
+      <aside class="hero-authentic-aircraft-card">
+        <figure class="evidence-media">
+          <div class="aircraft-thumb-box">
+            <img 
+              src="https://upload.wikimedia.org/wikipedia/commons/0/0e/9M-MRO_Boeing_777_Malaysia_Airlines_October_2013.jpg" 
+              alt="Malaysia Airlines Boeing 777-200ER registration 9M-MRO departing Los Angeles International Airport in October 2013" 
+              loading="eager"
+              data-source="https://commons.wikimedia.org/wiki/File:9M-MRO_Boeing_777_Malaysia_Airlines_October_2013.jpg"
+              data-subject="9M-MRO Airframe"
+              data-status="DOCUMENTED"
+            >
+            <div class="thumb-reticle">
+              <span class="ret-corner tl"></span><span class="ret-corner tr"></span>
+              <span class="ret-corner bl"></span><span class="ret-corner br"></span>
+              <span class="ret-tag">AIRFRAME VERIFIED</span>
+            </div>
+          </div>
+          <figcaption>
+            <strong>9M-MRO:</strong> The exact Boeing 777-200ER operating Flight MH370. Photographed at LAX, Oct 2013.
+            <div class="cap-sub">
+              <span>DOCUMENTED PHOTOGRAPH</span> &bull; 
+              <a href="https://commons.wikimedia.org/wiki/File:9M-MRO_Boeing_777_Malaysia_Airlines_October_2013.jpg" target="_blank" rel="noopener noreferrer">Paul Rowbotham (CC BY-SA 2.0)</a>
+            </div>
+          </figcaption>
+        </figure>
+      </aside>
+    </section>
+
+    <!-- 02. CHAPTER: THE CASE DOSSIER -->
+    <section class="chapter-section" id="case" data-chapter="02" data-chapter-name="THE CASE">
+      <div class="chapter-content-wrap">
+        <div class="chapter-header-block">
+          <span class="chap-badge">CHAPTER 02 &bull; CASE FILE</span>
+          <h2 class="chap-title">A CASE WITHOUT A FINAL LOCATION</h2>
+          <p class="chap-desc">
+            At 00:41 MYT on 8 March 2014, Flight MH370 took off from Kuala Lumpur International Airport bound for Beijing Capital. It had 239 people on board and fuel endurance for 7 hours and 31 minutes. Thirty-eight minutes into the flight, it vanished from civilian radar screens.
+          </p>
+        </div>
+
+        <div class="case-dashboard-grid">
+          <!-- Manifest Box -->
+          <div class="sky-panel">
+            <div class="panel-header">
+              <i class="fa-solid fa-clipboard-check text-cyan"></i>
+              <span>FLIGHT MANIFEST DATA [DOCUMENTED]</span>
+            </div>
+            <div class="panel-grid-2">
+              <div class="p-cell">
+                <span class="cell-label">DEPARTURE</span>
+                <span class="cell-primary">KUALA LUMPUR (WMKK)</span>
+                <span class="cell-sub">00:41:43 MYT (Runway 32R)</span>
+              </div>
+              <div class="p-cell">
+                <span class="cell-label">DESTINATION</span>
+                <span class="cell-primary">BEIJING CAPITAL (ZBAA)</span>
+                <span class="cell-sub">Scheduled 06:30 CST</span>
+              </div>
+              <div class="p-cell">
+                <span class="cell-label">PASSENGERS</span>
+                <span class="cell-primary">227 SOULS</span>
+                <span class="cell-sub">153 Chinese, 38 Malaysian + 12 Nations</span>
+              </div>
+              <div class="p-cell">
+                <span class="cell-label">FLIGHT CREW</span>
+                <span class="cell-primary">12 MALAYSIAN CITIZENS</span>
+                <span class="cell-sub">Capt. Zaharie (53) &bull; F/O Fariq (27)</span>
+              </div>
+              <div class="p-cell">
+                <span class="cell-label">CRUISING LEVEL</span>
+                <span class="cell-primary">FL350 (35,000 FT)</span>
+                <span class="cell-sub">Airspeed ~470 knots (870 km/h)</span>
+              </div>
+              <div class="p-cell">
+                <span class="cell-label">FUEL ON BOARD</span>
+                <span class="cell-primary">49,100 KG</span>
+                <span class="cell-sub">Endurance ~7 hr 31 min</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status Box -->
+          <div class="sky-panel">
+            <div class="panel-header">
+              <i class="fa-solid fa-satellite-dish text-amber"></i>
+              <span>OFFICIAL INVESTIGATION STATUS [OPEN]</span>
+            </div>
+            <div class="status-stream">
+              <div class="stream-row">
+                <div class="s-indicator red"></div>
+                <div class="s-info">
+                  <strong>MAIN AIRFRAME &bull; UNLOCATED</strong>
+                  <p>120,000 km² underwater sonar search along 7th Arc completed without locating fuselage or engines.</p>
+                </div>
+              </div>
+              <div class="stream-row">
+                <div class="s-indicator amber"></div>
+                <div class="s-info">
+                  <strong>FLIGHT RECORDERS (FDR / CVR) &bull; UNRECOVERED</strong>
+                  <p>Underwater acoustic locator beacons (37.5 kHz) expired in April 2014 without acoustic contact.</p>
+                </div>
+              </div>
+              <div class="stream-row">
+                <div class="s-indicator green"></div>
+                <div class="s-info">
+                  <strong>PHYSICAL DEBRIS &bull; CONFIRMED RECOVERED</strong>
+                  <p>Over 30 pieces found in Western Indian Ocean; 3 confirmed 9M-MRO components (Flaperon, Stabilizer, Outboard Flap).</p>
+                </div>
+              </div>
+              <div class="stream-row">
+                <div class="s-indicator cyan"></div>
+                <div class="s-info">
+                  <strong>PRIMARY CAUSE &bull; UNDETERMINED</strong>
+                  <p>Malaysian MOT Safety Investigation Final Report concludes team was unable to determine the cause of the diversion.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Evidential Tier Architecture -->
+        <div class="classification-strip">
+          <div class="c-strip-title">EVIDENTIARY CLASSIFICATION SYSTEM:</div>
+          <div class="c-strip-items">
+            <span class="tag-conf"><i class="fa-solid fa-circle-check"></i> CONFIRMED</span>
+            <span class="tag-doc"><i class="fa-solid fa-file-lines"></i> DOCUMENTED</span>
+            <span class="tag-rep"><i class="fa-solid fa-newspaper"></i> REPORTED</span>
+            <span class="tag-hyp"><i class="fa-solid fa-lightbulb"></i> HYPOTHESIS</span>
+            <span class="tag-disp"><i class="fa-solid fa-triangle-exclamation"></i> DISPUTED</span>
+            <span class="tag-unver"><i class="fa-solid fa-circle-question"></i> UNVERIFIED</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03. CHAPTER: THE FLIGHT (AIRWAY M770 INTERACTIVE ROUTE MAP) -->
+    <section class="chapter-section" id="flight" data-chapter="03" data-chapter-name="THE FLIGHT">
+      <div class="chapter-content-wrap">
+        <div class="chapter-header-block">
+          <span class="chap-badge">CHAPTER 03 &bull; FLIGHT PATH</span>
+          <h2 class="chap-title">THE SCHEDULED ROUTE: AIRWAY M770</h2>
+          <p class="chap-desc">
+            The flight path was completely routine until the waypoint IGARI in the Gulf of Thailand. Reconstruct the trajectory from takeoff to primary radar loss.
+          </p>
+        </div>
+
+        <div class="map-experience-panel">
+          <div id="flightRouteMap" class="sky-leaflet-map" role="region" aria-label="Flight Path Map"></div>
+          
+          <!-- Live Telemetry HUD Bar -->
+          <div class="map-telemetry-hud">
+            <div class="hud-top-meta">
+              <span class="hud-live-tag"><span class="blip-green"></span> TELEMETRY RECONSTRUCTION</span>
+              <span class="hud-src">[SRC-001 / SRC-005]</span>
+            </div>
+            
+            <div class="hud-readouts-grid">
+              <div class="h-stat">
+                <span class="lbl">WAYPOINT</span>
+                <span class="val" id="hudWaypoint">WMKK (Kuala Lumpur)</span>
+              </div>
+              <div class="h-stat">
+                <span class="lbl">TIME (MYT / UTC)</span>
+                <span class="val" id="hudTime">00:41 MYT (16:41 UTC)</span>
+              </div>
+              <div class="h-stat">
+                <span class="lbl">PRESSURE ALTITUDE</span>
+                <span class="val" id="hudAltitude">FL350 (35,000 FT)</span>
+              </div>
+              <div class="h-stat">
+                <span class="lbl">GROUND SPEED</span>
+                <span class="val" id="hudSpeed">471 KTS (872 KM/H)</span>
+              </div>
+              <div class="h-stat">
+                <span class="lbl">SSR TRANSPONDER</span>
+                <span class="val text-green" id="hudTransponder">ACTIVE [SQUAWK 2157]</span>
+              </div>
+              <div class="h-stat">
+                <span class="lbl">MAGNETIC HEADING</span>
+                <span class="val" id="hudHeading">025° (NORTHEAST)</span>
+              </div>
+            </div>
+
+            <!-- Scrubber Controller -->
+            <div class="hud-slider-wrap">
+              <div class="slider-label-row">
+                <span>FLIGHT PATH SCRUBBER</span>
+                <span>WAYPOINTS: 00:41 &rarr; 02:22 MYT</span>
+              </div>
+              <input type="range" id="flightScrubber" min="0" max="6" value="0" step="1" class="sky-slider" aria-label="Flight waypoint slider">
+              <div class="slider-ticks">
+                <span>00:41 KLIA</span>
+                <span>01:01 FL350</span>
+                <span>01:07 ACARS</span>
+                <span>01:21 IGARI</span>
+                <span>01:37 PENANG</span>
+                <span>02:02 P.PERAK</span>
+                <span>02:22 MEKAR</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout-box">
+          <i class="fa-solid fa-triangle-exclamation text-amber"></i>
+          <div>
+            <strong>SOURCE DATA LIMITATION:</strong>
+            After 01:21:13 MYT, secondary radar transponder data ended. Positions across the Malay Peninsula and Malacca Strait are reconstructed from Royal Malaysian Air Force (RMAF) military primary radar skin reflections. Unrecorded metrics are designated <span class="badge-inline">DATA NOT DISPLAYED / SOURCE LIMITATION</span>.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04. CHAPTER: THE LAST 90 MINUTES (HORIZONTAL PINNED TIMELINE) -->
+    <section class="chapter-section horizontal-timeline-chapter" id="last90" data-chapter="04" data-chapter-name="THE LAST 90 MINUTES">
+      <div class="chapter-content-wrap">
+        <div class="chapter-header-block">
+          <span class="chap-badge">CHAPTER 04 &bull; TIMELINE</span>
+          <h2 class="chap-title">THE LAST 90 MINUTES</h2>
+          <p class="chap-desc">
+            A chronological reconstruction of the critical window between takeoff and the disappearance from terrestrial radar into total radio silence.
+          </p>
+        </div>
+
+        <!-- Horizontal Scroll Timeline Container -->
+        <div class="horizontal-timeline-track" id="horizontalTrack">
+          <!-- Node 1 -->
+          <div class="timeline-panel" data-event="1">
+            <div class="panel-time">00:41:43 MYT</div>
+            <div class="panel-badge badge-doc">DOCUMENTED</div>
+            <h3 class="panel-heading">Takeoff from Kuala Lumpur</h3>
+            <p class="panel-body">Flight MH370 departs runway 32R at KLIA, climbing along airway M770 towards cruising altitude FL350 with 239 passengers and crew.</p>
+            <div class="panel-foot">[SRC-001: MOT Safety Report]</div>
+          </div>
+
+          <!-- Node 2 -->
+          <div class="timeline-panel" data-event="2">
+            <div class="panel-time">01:07:55 MYT</div>
+            <div class="panel-badge badge-doc">DOCUMENTED</div>
+            <h3 class="panel-heading">Final ACARS Data Packet</h3>
+            <p class="panel-body">The Aircraft Communications Addressing and Reporting System (ACARS) transmits its routine VHF data packet. Engine parameters, electrical systems, and fuel burn are completely normal.</p>
+            <div class="panel-foot">[SRC-001 / Boeing Logbook]</div>
+          </div>
+
+          <!-- Node 3 -->
+          <div class="timeline-panel highlight-panel" data-event="3">
+            <div class="panel-time text-cyan">01:19:30 MYT</div>
+            <div class="panel-badge badge-conf">CONFIRMED AUDIO</div>
+            <h3 class="panel-heading">"Good night Malaysian three seven zero."</h3>
+            <p class="panel-body">Kuala Lumpur Area Control Centre instructs MH370 to contact Ho Chi Minh on 120.9 MHz. Captain Zaharie delivers the final voice transmission. The aircraft never checked in with Vietnam.</p>
+            <div class="panel-foot">[SRC-005: DCA ATC Transcript]</div>
+          </div>
+
+          <!-- Node 4 -->
+          <div class="timeline-panel alert-panel" data-event="4">
+            <div class="panel-time text-red">01:21:13 MYT</div>
+            <div class="panel-badge badge-disp">TRANSPONDER CEASES</div>
+            <h3 class="panel-heading">Waypoint IGARI Disappearance</h3>
+            <p class="panel-body">At the boundary between Kuala Lumpur and Ho Chi Minh Flight Information Regions, the Mode-S transponder stops broadcasting. The plane vanishes from civilian ATC screens.</p>
+            <div class="panel-foot">[SRC-001: ICAO Annex 13]</div>
+          </div>
+
+          <!-- Node 5 -->
+          <div class="timeline-panel" data-event="5">
+            <div class="panel-time text-amber">01:30 &ndash; 01:37 MYT</div>
+            <div class="panel-badge badge-doc">PRIMARY RADAR</div>
+            <h3 class="panel-heading">The Left Turn Across Malaysia</h3>
+            <p class="panel-body">Military primary radar detects the aircraft turning sharp left from heading 025° to heading 240°, crossing back over the Malay Peninsula past Kota Bharu and towards Penang island.</p>
+            <div class="panel-foot">[SRC-015: RMAF Defense Briefing]</div>
+          </div>
+
+          <!-- Node 6 -->
+          <div class="timeline-panel" data-event="6">
+            <div class="panel-time">02:22:12 MYT</div>
+            <div class="panel-badge badge-doc">LAST RADAR CONTACT</div>
+            <h3 class="panel-heading">Final Radar Hit at Waypoint MEKAR</h3>
+            <p class="panel-body">RMAF primary radar records its final skin reflection 200 nautical miles northwest of Penang in the Andaman Sea along airway N571. Beyond this point, land-based radar ends.</p>
+            <div class="panel-foot">[SRC-001: Final Report]</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05. CHAPTER: RADAR ATMOSPHERE (FULLSCREEN TERMINAL) -->
+    <section class="chapter-section fullscreen-chapter" id="radar" data-chapter="05" data-chapter-name="PRIMARY RADAR">
+      <div class="chapter-content-wrap">
+        <div class="chapter-header-block">
+          <span class="chap-badge">CHAPTER 05 &bull; DEFENSE SURVEILLANCE</span>
+          <h2 class="chap-title">THE RADAR TRACK DID NOT END. THE STORY DID.</h2>
+          <p class="chap-desc">
+            When civilian air traffic controllers lost the aircraft, air defense radar systems continued to record its physical skin reflections.
+          </p>
+        </div>
+
+        <div class="radar-scope-split">
+          <!-- Canvas Radar Scope -->
+          <div class="radar-viewport-frame">
+            <canvas id="radarScopeCanvas" width="500" height="500" aria-label="Interactive Air Defense Radar Scope"></canvas>
+            <div class="radar-hud-tag">
+              <span>RMAF BUTTERWORTH / GONG KEDAK PSR</span>
+              <span>12 RPM &bull; 2.8 GHZ</span>
+            </div>
+          </div>
+
+          <!-- Radar Forensic Comparison -->
+          <div class="radar-dossier-box">
+            <div class="dossier-card">
+              <span class="card-kicker"><i class="fa-solid fa-tower-broadcast"></i> CIVILIAN SECONDARY SURVEILLANCE RADAR (SSR)</span>
+              <h4>COOPERATIVE TRANSPONDER INTERROGATION</h4>
+              <p>Relies on the onboard transponder to return Squawk 2157, barometric altitude (FL350), and GPS coordinates. Ceased at 01:21:13 MYT at waypoint IGARI. No further secondary radar contacts occurred.</p>
+              <div class="card-status-badge text-red">STATUS: CEASED AT FIR BOUNDARY</div>
+            </div>
+
+            <div class="dossier-card">
+              <span class="card-kicker"><i class="fa-solid fa-satellite-dish"></i> MILITARY PRIMARY SURVEILLANCE RADAR (PSR)</span>
+              <h4>NON-COOPERATIVE SKIN REFLECTION</h4>
+              <p>Measures electromagnetic pulse echos off the titanium and aluminum skin of the fuselage. Tracked the aircraft making an unscheduled turn across Peninsular Malaysia to Penang, Pulau Perak, and waypoint MEKAR.</p>
+              <div class="card-status-badge text-green">STATUS: ACTIVE UNTIL 02:22 MYT (MEKAR)</div>
+            </div>
+
+            <div class="radar-official-statement">
+              <i class="fa-solid fa-shield-halved"></i>
+              <div>
+                <strong>OFFICIAL AIR DEFENSE RECORD:</strong>
+                The Royal Malaysian Air Force stated the target was identified as a non-hostile friendly commercial aircraft, which is why scramble fighters were not dispatched from Butterworth Air Base.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06. CHAPTER: THE TURN AT WAYPOINT IGARI -->
+    <section class="chapter-section" id="turn" data-chapter="06" data-chapter-name="THE TURN">
+      <div class="chapter-content-wrap">
+        <div class="chapter-header-block">
+          <span class="chap-badge">CHAPTER 06 &bull; AIRSPACE DEAD ZONE</span>
+          <h2 class="chap-title">THE TURN</h2>
+          <p class="chap-desc">
+            The deviation occurred in the exact gap between Malaysian and Vietnamese air traffic control. The aircraft did not veer randomly; it navigated through recognized aeronautical waypoints.
+          </p>
+        </div>
+
+        <div class="turn-visual-layout">
+          <!-- Official DCA Flight Path Diagram -->
+          <figure class="evidence-media turn-map-figure">
+            <img 
+              src="https://upload.wikimedia.org/wikipedia/commons/0/06/Malaysia_Airlines_MH370_path_labelled.svg" 
+              alt="Official Department of Civil Aviation map of MH370 flight path and unscheduled turn" 
+              loading="lazy"
+              data-source="https://commons.wikimedia.org/wiki/File:Malaysia_Airlines_MH370_path_labelled.svg"
+              data-subject="MH370 Turn Route"
+              data-status="DOCUMENTED"
+            >
+            <figcaption>
+              <strong>OFFICIAL PATH &amp; TURN MAP:</strong> Departure from KUL, transponder loss at IGARI, turn back across Malay Peninsula to VAMPI and MEKAR.
+              <div class="cap-sub">
+                <span>DOCUMENTED MAP</span> &bull; <a href="https://commons.wikimedia.org/wiki/File:Malaysia_Airlines_MH370_path_labelled.svg" target="_blank" rel="noopener noreferrer">DCA Malaysia (Public Domain)</a>
+              </div>
+            </figcaption>
+          </figure>
+
+          <!-- Forensic Breakdown -->
+          <div class="turn-forensic-list">
+            <div class="f-block">
+              <span class="badge badge-doc">DOCUMENTED FACT</span>
+              <h4>Tactical Airspace Timing</h4>
+              <p>The turn was initiated within seconds of handoff between Malaysian ATC and Vietnamese ATC, during which neither controller held active surveillance responsibility.</p>
+            </div>
+
+            <div class="f-block">
+              <span class="badge badge-doc">DOCUMENTED FACT</span>
+              <h4>Navigational Waypoint Tracking</h4>
+              <p>The aircraft navigated along airway N571 toward waypoints VAMPI and MEKAR, which required intentional manual flying or programmed Flight Management Computer (FMC) commands.</p>
+            </div>
+
+            <div class="f-block">
+              <span class="badge badge-hyp">INVESTIGATIVE INFERENCE</span>
+              <h4>Human Intervention</h4>
+              <p>The Malaysian Safety Investigation Report concluded: <em>"The change in flight path was likely made under manual control or programmed autopilot input by someone with flight proficiency."</em></p>
+            </div>
+
+            <div class="f-block">
+              <span class="badge badge-unver">UNKNOWN</span>
+              <h4>Cockpit Control State</h4>
+              <p>It remains unverified who was seated in the command seats, whether cabin depressurization occurred, or if unlawful interference took place.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07. CHAPTER: SATELLITE (INMARSAT CLASSIC AERO & 7TH ARC) -->
+    <section class="chapter-section fullscreen-chapter" id="satellite" data-chapter="07" data-chapter-name="SATELLITE TELEMETRY">
+      <div class="chapter-content-wrap">
+        <div class="chapter-header-block">
+          <span class="chap-badge">CHAPTER 07 &bull; STRATOSPHERIC SIGNALS</span>
+          <h2 class="chap-title">THE SEVENTH ARC: INMARSAT HANDSHAKES</h2>
+          <p class="chap-desc">
+            Seven hours after radar loss, the aircraft’s Satellite Data Unit (SDU) transmitted automated hourly radio "handshakes" to an Inmarsat-3 F1 geostationary satellite 35,786 kilometers above the equator.
+          </p>
+        </div>
+
+        <div class="satellite-mechanics-grid">
+          <!-- Orbital Geometry Canvas -->
+          <div class="sat-diagram-container">
+            <canvas id="satelliteArcsCanvas" width="540" height="420" aria-label="Inmarsat 7 BTO Arcs Orbital Geometry"></canvas>
+            <div class="sat-legend-row">
+              <span class="sat-chip chip-1">1st Arc (02:25)</span>
+              <span class="sat-chip chip-2">2nd Arc (03:41)</span>
+              <span class="sat-chip chip-3">3rd Arc (04:41)</span>
+              <span class="sat-chip chip-4">4th Arc (05:41)</span>
+              <span class="sat-chip chip-5">5th Arc (06:41)</span>
+              <span class="sat-chip chip-6">6th Arc (08:11)</span>
+              <span class="sat-chip chip-7 active">7th Arc (08:19 Fuel Flameout)</span>
+            </div>
+            <div class="sat-diagram-caption">
+              FIGURE 7.1: Burst Timing Offset (BTO) distance rings from Inmarsat-3 F1 (64.5°E) intersecting the Earth's surface in the Southern Indian Ocean.
+            </div>
+          </div>
+
+          <!-- Dual Parameter Breakdown & Table -->
+          <div class="sat-telemetry-dossier">
+            <div class="math-parameter-card">
+              <h4><i class="fa-solid fa-satellite"></i> TWO SCIENTIFIC MEASUREMENTS</h4>
+              <div class="param-row">
+                <span class="p-tag">BURST TIMING OFFSET (BTO)</span>
+                <p>Measures the microsecond time delay between Perth ground station, satellite, and aircraft. Defined concentric distance rings on Earth at each hour.</p>
+              </div>
+              <div class="param-row">
+                <span class="p-tag">BURST FREQUENCY OFFSET (BFO)</span>
+                <p>Measures Doppler shifts caused by aircraft velocity relative to the satellite. Ruled out the Northern Corridor (Central Asia) and proved flight into the Southern Indian Ocean.</p>
+              </div>
+            </div>
+
+            <!-- The 7 Pings Table -->
+            <div class="pings-card">
+              <table class="pings-table" aria-label="Inmarsat 7 Hourly Handshake Table">
+                <thead>
+                  <tr>
+                    <th>ARC</th>
+                    <th>TIME (MYT)</th>
+                    <th>TRIGGER</th>
+                    <th>STATUS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1st</td>
+                    <td>02:25:27</td>
+                    <td>SDU Log-on Request (Re-boot)</td>
+                    <td><span class="badge-table green">CONFIRMED</span></td>
+                  </tr>
+                  <tr>
+                    <td>2nd</td>
+                    <td>03:41:00</td>
+                    <td>Routine Ground-to-Air Handshake</td>
+                    <td><span class="badge-table neutral">DOCUMENTED</span></td>
+                  </tr>
+                  <tr>
+                    <td>3rd</td>
+                    <td>04:41:02</td>
+                    <td>Routine Ground-to-Air Handshake</td>
+                    <td><span class="badge-table neutral">DOCUMENTED</span></td>
+                  </tr>
+                  <tr>
+                    <td>4th</td>
+                    <td>05:41:24</td>
+                    <td>Routine Ground-to-Air Handshake</td>
+                    <td><span class="badge-table neutral">DOCUMENTED</span></td>
+                  </tr>
+                  <tr>
+                    <td>5th</td>
+                    <td>06:41:42</td>
+                    <td>Routine Ground-to-Air Handshake</td>
+                    <td><span class="badge-table neutral">DOCUMENTED</span></td>
+                  </tr>
+                  <tr>
+                    <td>6th</td>
+                    <td>08:11:00</td>
+                    <td>Final Full Routine Handshake</td>
+                    <td><span class="badge-table neutral">DOCUMENTED</span></td>
+                  </tr>
+                  <tr class="final-ping-row">
+                    <td><strong>7th</strong></td>
+                    <td><strong>08:19:37</strong></td>
+                    <td><strong>Unprompted Log-on (Fuel Exhaustion)</strong></td>
+                    <td><span class="badge-table amber">ENGINE FLAMEOUT</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 08. CHAPTER: THE OCEAN DESCENT -->
+    <section class="chapter-section fullscreen-chapter" id="ocean" data-chapter="08" data-chapter-name="THE SOUTHERN OCEAN">
+      <div class="chapter-content-wrap">
+        <div class="chapter-header-block">
+          <span class="chap-badge">CHAPTER 08 &bull; BATHYMETRIC ABYSS</span>
+          <h2 class="chap-title">THE AIRCRAFT WAS NOT FOUND</h2>
+          <p class="chap-desc">
+            The 7th Arc intersects one of the most remote and tempestuous ocean regions on the planet: the Roaring Forties of the Southern Indian Ocean, with depths plunging past 6,000 meters.
+          </p>
+        </div>
+
+        <div class="ocean-depth-stage">
+          <!-- Ocean Depth Gradient Meter -->
+          <div class="depth-column">
+            <div class="ocean-surface-bar">SURFACE: ROARING FORTIES &bull; LATITUDE 30°S &ndash; 39°S</div>
+            <div class="ocean-water-column">
+              <div class="depth-tag" style="top: 8%;"><span>0m</span> Surface Search Area</div>
+              <div class="depth-tag" style="top: 35%;"><span>-1,500m</span> Continental Shelf Edge</div>
+              <div class="depth-tag" style="top: 65%;"><span>-4,000m</span> Broken Ridge Abyssal Plain</div>
+              <div class="depth-tag" style="top: 92%;"><span>-6,000m</span> Diamantina Trench</div>
+            </div>
+          </div>
+
+          <!-- Deep Ocean Analysis -->
+          <div class="ocean-analysis-stack">
+            <div class="ocean-stats-grid">
+              <div class="stat-card">
+                <span class="s-val">120,000 KM²</span>
+                <span class="s-lbl">UNDERWATER SEARCH ZONE</span>
+                <p>Scanned with high-resolution synthetic aperture sidescan sonar without detecting the aircraft debris field.</p>
+              </div>
+              <div class="stat-card">
+                <span class="s-val">1,046 DAYS</span>
+                <span class="s-lbl">ATSB SEARCH DURATION</span>
+                <p>Longest and most technically complex underwater acoustic search in aviation history ($150M+ multinational cost).</p>
+              </div>
+              <div class="stat-card">
+                <span class="s-val">6,000 M</span>
+                <span class="s-lbl">EXTREME ABYSSAL DEPTHS</span>
+                <p>Terrain featured uncharted underwater volcanoes, tectonic trenches, and vertical submarine cliffs.</p>
+              </div>
+            </div>
+
+            <div class="ocean-quote-card">
+              <i class="fa-solid fa-water text-cyan"></i>
+              <blockquote>
+                "The search was like searching for a needle in a haystack, except the haystack was the size of the United Kingdom, completely dark, 4,000 meters underwater, and shifting under ocean currents."
+              </blockquote>
+              <span class="quote-src">&mdash; Australian Transport Safety Bureau (ATSB) Final Operational Report (2017)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 09. CHAPTER: RECOVERED DEBRIS (THE PIECES THAT SURFACED) -->
+    <section class="chapter-section" id="debris" data-chapter="09" data-chapter-name="RECOVERED DEBRIS">
+      <div class="chapter-content-wrap">
+        <div class="chapter-header-block">
+          <span class="chap-badge">CHAPTER 09 &bull; PHYSICAL EVIDENCE</span>
+          <h2 class="chap-title">THE PIECES THAT SURFACED</h2>
+          <p class="chap-desc">
+            Physical evidence proves the aircraft entered the Indian Ocean. Over thirty marine debris fragments washed ashore along the coasts of East Africa, Madagascar, and Indian Ocean islands.
+          </p>
+        </div>
+
+        <div class="debris-cards-grid">
+          <!-- Item 1: Reunion Flaperon -->
+          <article class="debris-item-card">
+            <div class="debris-thumb">
+              <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/7/7d/MH370_Debris_compiled.png" 
+                alt="Compiled photographs of verified MH370 aircraft debris including the Reunion Island flaperon" 
+                loading="lazy"
+                data-source="https://commons.wikimedia.org/wiki/File:MH370_Debris_compiled.png"
+                data-subject="MH370 Debris Collection"
+                data-status="CONFIRMED"
+              >
+              <span class="debris-badge badge-conf">CONFIRMED 9M-MRO</span>
+            </div>
+            <div class="debris-body">
+              <span class="deb-id">EV-001 &bull; 29 JULY 2015</span>
+              <h3>Right-Wing Flaperon (Réunion Island)</h3>
+              <p>Found on a beach in Saint-André, Réunion. Internal serial numbers (657BB) confirmed it belonged to 9M-MRO. French DGA / BEA examination concluded trailing-edge damage was consistent with high-energy impact, not a controlled low-speed ditching.</p>
+              <div class="deb-loc"><i class="fa-solid fa-location-dot"></i> Saint-André, Réunion Island &bull; [SRC-006]</div>
+            </div>
+          </article>
+
+          <!-- Item 2: Mozambique Fairing -->
+          <article class="debris-item-card">
+            <div class="debris-thumb">
+              <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Map_of_the_wreck_part_finds_of_the_aircraft_of_flight_MH_370_of_Malaysia_Airlines.png" 
+                alt="Map of the wreck part finds of flight MH370 in the Western Indian Ocean" 
+                loading="lazy"
+                data-source="https://commons.wikimedia.org/wiki/File:Map_of_the_wreck_part_finds_of_the_aircraft_of_flight_MH_370_of_Malaysia_Airlines.png"
+                data-subject="Debris Recovery Map"
+                data-status="DOCUMENTED"
+              >
+              <span class="debris-badge badge-conf">ALMOST CERTAINLY 9M-MRO</span>
+            </div>
+            <div class="debris-body">
+              <span class="deb-id">EV-002 &bull; DEC 2015 / MAR 2016</span>
+              <h3>Horizontal Stabilizer Fairing ("NO STEP")</h3>
+              <p>Found on a sandbank in Mozambique by Blaine Gibson. Stenciled font and color matched Boeing specifications used exclusively by Malaysia Airlines. ATSB concluded it almost certainly originated from 9M-MRO.</p>
+              <div class="deb-loc"><i class="fa-solid fa-location-dot"></i> Vilankulo, Mozambique &bull; [SRC-002]</div>
+            </div>
+          </article>
+
+          <!-- Item 3: Tanzania Outboard Flap -->
+          <article class="debris-item-card">
+            <div class="debris-thumb">
+              <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/5/5b/Reunion_debris_compared_to_MH370_flight_paths_and_underwater_search_area.png" 
+                alt="Reunion debris drift analysis compared to MH370 flight paths and search area" 
+                loading="lazy"
+                data-source="https://commons.wikimedia.org/wiki/File:Reunion_debris_compared_to_MH370_flight_paths_and_underwater_search_area.png"
+                data-subject="Oceanographic Drift Model"
+                data-status="CONFIRMED"
+              >
+              <span class="debris-badge badge-conf">CONFIRMED 9M-MRO</span>
+            </div>
+            <div class="debris-body">
+              <span class="deb-id">EV-003 &bull; 24 JUNE 2016</span>
+              <h3>Right Outboard Flap (Pemba, Tanzania)</h3>
+              <p>Large section of right wing flap. Manufacturer part stamps verified origin from 9M-MRO. Critical finding: the flap was retracted inside the wing when it struck the water, contradicting controlled ditching theories.</p>
+              <div class="deb-loc"><i class="fa-solid fa-location-dot"></i> Pemba Island, Tanzania &bull; [SRC-002]</div>
+            </div>
+          </article>
+        </div>
+
+        <div class="drift-box">
+          <i class="fa-solid fa-compass-drafting text-cyan"></i>
+          <div>
+            <strong>CSIRO &amp; GEOMAR REVERSE-DRIFT MODELING:</strong>
+            Oceanographic simulations tracking the South Equatorial Current across 16–24 months corroborated that debris recovered in East Africa originated from the 7th Arc between latitudes 32°S and 36°S.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. CHAPTER: SEARCH OPERATIONS -->
+    <section class="chapter-section" id="search" data-chapter="10" data-chapter-name="THE SEARCH">
+      <div class="chapter-content-wrap">
+        <div class="chapter-header-block">
+          <span class="chap-badge">CHAPTER 10 &bull; SEABED OPERATIONS</span>
+          <h2 class="chap-title">THE SEARCH</h2>
+          <p class="chap-desc">
+            A multinational deployment across the South China Sea, Malacca Strait, and the vast expanse of the Southern Indian Ocean.
+          </p>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="ops-filter-row">
+          <span class="f-lbl">FILTER OPERATIONS:</span>
+          <button type="button" class="op-btn active" data-filter="all">ALL (3)</button>
+          <button type="button" class="op-btn" data-filter="official">OFFICIAL (ATSB)</button>
+          <button type="button" class="op-btn" data-filter="private">PRIVATE (OCEAN INFINITY)</button>
+          <button type="button" class="op-btn" data-filter="military">MARITIME PATROL</button>
+        </div>
+
+        <div class="ops-grid" id="searchOpsGrid">
+          <!-- Op 1 -->
+          <article class="op-card" data-category="military">
+            <div class="op-img-box">
+              <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ed/A_P-3C_Orion_aircraft_assists_with_Malaysia_Airlines_flight_MH370_recovery_efforts.jpg" 
+                alt="Royal Australian Air Force P-3C Orion assists in search for flight MH370" 
+                loading="lazy"
+                data-source="https://commons.wikimedia.org/wiki/File:A_P-3C_Orion_aircraft_assists_with_Malaysia_Airlines_flight_MH370_recovery_efforts.jpg"
+                data-subject="Air Search Operations"
+                data-status="DOCUMENTED"
+              >
+            </div>
+            <div class="op-card-body">
+              <span class="badge badge-doc">SURFACE AIR PATROL</span>
+              <h3>Maritime Air Search (Mar &ndash; Apr 2014)</h3>
+              <p>Conducted by Australia, US Navy, New Zealand, China, Japan, and South Korea. 4.5 million km² surveyed visually and by radar. No aircraft debris spotted before surface items dispersed.</p>
+              <div class="op-meta">AREA: 4.5M KM² &bull; RESULT: NO SURFACE CONTACT</div>
+            </div>
+          </article>
+
+          <!-- Op 2 -->
+          <article class="op-card" data-category="official">
+            <div class="op-img-box">
+              <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/9/98/Search_area_Malaysia_Airlines_Flight_370.PNG" 
+                alt="Official ATSB priority underwater search area along the 7th Arc" 
+                loading="lazy"
+                data-source="https://commons.wikimedia.org/wiki/File:Search_area_Malaysia_Airlines_Flight_370.PNG"
+                data-subject="Underwater Search Area"
+                data-status="DOCUMENTED"
+              >
+            </div>
+            <div class="op-card-body">
+              <span class="badge badge-conf">ATSB UNDERWATER DEEP-TOW</span>
+              <h3>Bathymetric Sonar Survey (2014 &ndash; 2017)</h3>
+              <p>Specialized survey vessels scanned 120,000 km² along the 7th Arc with synthetic aperture sonar down to 6,000m depths. Two 19th-century shipwrecks found; no aircraft hull detected.</p>
+              <div class="op-meta">DEPTH: TO 6,000M &bull; RESULT: SUSPENDED JAN 2017</div>
+            </div>
+          </article>
+
+          <!-- Op 3 -->
+          <article class="op-card" data-category="private">
+            <div class="op-img-box">
+              <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/f/fe/The_U.S._Navy_assists_in_the_search_for_Malaysia_Airlines_flight_MH370.jpg" 
+                alt="U.S. Navy maritime patrol search mission crew for MH370" 
+                loading="lazy"
+                data-source="https://commons.wikimedia.org/wiki/File:The_U.S._Navy_assists_in_the_search_for_Malaysia_Airlines_flight_MH370.jpg"
+                data-subject="Naval Surveillance"
+                data-status="DOCUMENTED"
+              >
+            </div>
+            <div class="op-card-body">
+              <span class="badge badge-doc">OCEAN INFINITY CHARTER</span>
+              <h3>Seabed Constructor "No Cure, No Fee" (2018)</h3>
+              <p>Private seabed exploration firm Ocean Infinity deployed 8 autonomous HUGIN AUV submersibles. Covered 112,000 km² extending north of original search area. Concluded without discovery.</p>
+              <div class="op-meta">TECH: 8 HUGIN AUVS &bull; RESULT: INCONCLUSIVE</div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11. CHAPTER: THE EVIDENCE ROOM & PILOT HYPOTHESIS -->
+    <section class="chapter-section" id="evidence" data-chapter="11" data-chapter-name="EVIDENCE ROOM">
+      <div class="chapter-content-wrap">
+        <div class="chapter-header-block">
+          <span class="chap-badge">CHAPTER 11 &bull; FORENSIC DOSSIER</span>
+          <h2 class="chap-title">THE EVIDENCE ROOM</h2>
+          <p class="chap-desc">
+            Not everything in the file has the same weight. Browse primary data records, flight recorder parameters, radar hits, and examined hypotheses.
+          </p>
+        </div>
+
+        <!-- Pilot Investigation Spotlight -->
+        <div class="pilot-spotlight-card">
+          <div class="pilot-visual">
+            <img 
+              src="https://upload.wikimedia.org/wikipedia/commons/4/4d/Boeing_777_cockpit_highlighting_First_Officer_oxygen_mask_location.jpg" 
+              alt="Boeing 777 cockpit instrumentation and oxygen system layout" 
+              loading="lazy"
+              data-source="https://commons.wikimedia.org/wiki/File:Boeing_777_cockpit_highlighting_First_Officer_oxygen_mask_location.jpg"
+              data-subject="Boeing 777 Cockpit Systems"
+              data-status="DOCUMENTED"
+            >
+            <div class="pilot-caption">
+              <strong>COCKPIT SYSTEMS ARCHITECTURE:</strong> Flight crew quick-donning 100% positive-pressure oxygen masks provide over 2 hours of endurance.
+            </div>
+          </div>
+          <div class="pilot-analysis">
+            <span class="badge badge-hyp">THE PILOT HYPOTHESIS [EXAMINED SCENARIO]</span>
+            <h3>Captain Zaharie Ahmad Shah &amp; Home Simulator Data</h3>
+            <p><strong>RECOVERED DATA:</strong> The FBI cyber unit recovered deleted data points from Captain Zaharie’s home Microsoft Flight Simulator X. Six points plotted a course departing KL, traversing the Malacca Strait, and turning into the Southern Indian Ocean.</p>
+            <p><strong>ATSB &amp; MOT FINDINGS:</strong> The ATSB noted the simulated waypoints were constructed from separate fragmented sessions and did not match MH370’s actual fuel-burn speed or track. Malaysian Police and psychiatric checks found no signs of mental illness, radicalization, debt, or personal distress. Motive remains unproven.</p>
+            <div class="pilot-meta-row">
+              <span class="badge badge-doc">SIMULATOR DATA DOCUMENTED</span>
+              <span class="badge badge-disp">MOTIVE UNPROVEN</span>
+              <a href="#sources" class="src-ref" data-source-id="SRC-001">[SRC-001 / SRC-009]</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Evidence Cards Toolbar -->
+        <div class="evidence-toolbar-box">
+          <div class="category-filters" id="evidenceFilterGroup">
+            <button type="button" class="filter-pill active" data-cat="all">ALL (15)</button>
+            <button type="button" class="filter-pill" data-cat="radar">RADAR &amp; FLIGHT</button>
+            <button type="button" class="filter-pill" data-cat="satellite">SATELLITE</button>
+            <button type="button" class="filter-pill" data-cat="debris">PHYSICAL DEBRIS</button>
+            <button type="button" class="filter-pill" data-cat="cockpit">COCKPIT &amp; CREW</button>
+            <button type="button" class="filter-pill" data-cat="cargo">CARGO &amp; SYSTEMS</button>
+          </div>
+          <div class="ev-counter">
+            SHOWING: <span id="evidenceVisibleCount">15</span> EVIDENCE CARDS
+          </div>
+        </div>
+
+        <!-- Dynamic Evidence Cards Grid -->
+        <div class="evidence-cards-container" id="evidenceCardsGrid">
+          <!-- Populated dynamically via script.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- 12. CHAPTER: HYPOTHESIS MATRIX & WHAT WE KNOW -->
+    <section class="chapter-section fullscreen-chapter" id="matrix" data-chapter="12" data-chapter-name="THEORY MATRIX">
+      <div class="chapter-content-wrap">
+        <div class="chapter-header-block">
+          <span class="chap-badge">CHAPTER 12 &bull; MATRIX EVALUATION</span>
+          <h2 class="chap-title">THEORY MATRIX &bull; KNOWN &amp; UNKNOWN</h2>
+          <p class="chap-desc">
+            Twelve documented hypotheses evaluated side-by-side against physical evidence. Filter by evidentiary status. No arbitrary scores. No rankings.
+          </p>
+        </div>
+
+        <!-- Matrix Filters -->
+        <div class="matrix-filter-bar">
+          <span class="f-lbl">FILTER BY STATUS:</span>
+          <button type="button" class="m-pill active" data-matrix-filter="all">ALL (12)</button>
+          <button type="button" class="m-pill" data-matrix-filter="HYPOTHESIS">HYPOTHESES (4)</button>
+          <button type="button" class="m-pill" data-matrix-filter="DISPUTED">DISPUTED BY EVIDENCE (5)</button>
+          <button type="button" class="m-pill" data-matrix-filter="UNVERIFIED">UNVERIFIED (3)</button>
+        </div>
+
+        <div class="matrix-table-wrap">
+          <table class="sky-matrix-table" id="hypothesisMatrixTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>CORE CLAIM</th>
+                <th>DOCUMENTED BASIS</th>
+                <th>FORENSIC COUNTERPOINTS</th>
+                <th>STATUS</th>
+                <th>PRIMARY SOURCE</th>
+              </tr>
+            </thead>
+            <tbody id="matrixTableBody">
+              <!-- Populated dynamically via script.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 3-PILLAR VERDICT: KNOWN / INFERRED / UNKNOWN -->
+        <div class="three-pillars-layout">
+          <!-- Pillar 1 -->
+          <div class="pillar-card known-pillar">
+            <div class="pillar-top">
+              <span class="p-icon"><i class="fa-solid fa-check"></i></span>
+              <h3>WHAT WE KNOW</h3>
+              <span class="p-sub">ESTABLISHED FACTS</span>
+            </div>
+            <ul class="pillar-points">
+              <li>Takeoff from KLIA at 00:41 MYT, normal climb to FL350.</li>
+              <li>Final voice contact at 01:19:30 MYT: "Good night Malaysian three seven zero."</li>
+              <li>Mode-S transponder ceased at 01:21:13 MYT at waypoint IGARI.</li>
+              <li>Primary air defense radar tracked a 110° turn across Peninsular Malaysia to MEKAR.</li>
+              <li>Inmarsat SDU logged 7 hourly handshakes, confirming flight until 08:19 MYT.</li>
+              <li>Over 30 debris fragments recovered; flaperon and flap confirmed 9M-MRO.</li>
+              <li>Right outboard flap was retracted inside wing at water impact.</li>
+            </ul>
+          </div>
+
+          <!-- Pillar 2 -->
+          <div class="pillar-card inferred-pillar">
+            <div class="pillar-top">
+              <span class="p-icon"><i class="fa-solid fa-brain"></i></span>
+              <h3>WHAT WAS INFERRED</h3>
+              <span class="p-sub">SCIENTIFIC DEDUCTION</span>
+            </div>
+            <ul class="pillar-points">
+              <li>Turn followed standard aeronautical waypoints (VAMPI, MEKAR), requiring human FMC or manual inputs.</li>
+              <li>Doppler BFO shifts mathematically prove a southward flight path terminating on the 7th Arc.</li>
+              <li>The 08:19:37 unprompted log-on was triggered by electrical reboot following fuel starvation.</li>
+              <li>Final high descent rate (>15,000 fpm) indicates an unpiloted steep spiraling dive.</li>
+              <li>Reverse-drift oceanographic models converge on Southern Indian Ocean origin.</li>
+            </ul>
+          </div>
+
+          <!-- Pillar 3 -->
+          <div class="pillar-card unknown-pillar">
+            <div class="pillar-top">
+              <span class="p-icon"><i class="fa-solid fa-question"></i></span>
+              <h3>WHAT REMAINS UNKNOWN</h3>
+              <span class="p-sub">UNRESOLVED MYSTERIES</span>
+            </div>
+            <ul class="pillar-points">
+              <li>Who was at the flight controls when the transponder was disabled.</li>
+              <li>The motivation behind the unscheduled flight path diversion.</li>
+              <li>Cockpit state: whether hypoxia, unlawful interference, or crew incapacitation occurred.</li>
+              <li>Exact resting coordinates of the main fuselage on the ocean floor.</li>
+              <li>The physical flight recorders (CVR &amp; FDR) remain unfound.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- THE BLACK BOX MONOLITH CLOSING -->
+        <div class="black-box-centerpiece">
+          <div class="monolith-beacon">
+            <div class="beacon-strobe-glow"></div>
+            <span class="beacon-label">ULB ACOUSTIC BEACON &bull; 37.5 KHZ (EXPIRED)</span>
+          </div>
+          
+          <h2 class="centerpiece-title">THE BLACK BOX DID NOT TELL US EVERYTHING.</h2>
+          <p class="centerpiece-sub">IT LEFT QUESTIONS.</p>
+
+          <div class="centerpiece-triptych">
+            <div class="t-item">
+              <span class="t-kicker">WHAT WE HAVE</span>
+              <p>7 satellite pings. 3 verified wing fragments. Radar reflections over Penang. 54 seconds of ATC voice audio.</p>
+            </div>
+            <div class="t-item">
+              <span class="t-kicker">WHAT WE LOST</span>
+              <p>2 hours of Cockpit Voice Recorder audio. 25 hours of flight data parameters. 239 innocent human lives.</p>
+            </div>
+            <div class="t-item">
+              <span class="t-kicker">WHAT WE STILL DON'T KNOW</span>
+              <p>The definitive cause. The resting coordinates. Why a modern wide-body jetliner vanished from the sky.</p>
+            </div>
+          </div>
+
+          <div class="final-archive-open-box">
+            <span class="status-open-badge"><i class="fa-solid fa-lock-open"></i> ARCHIVE STATUS: OPEN FILE</span>
+            <h3>THE FILE REMAINS OPEN.</h3>
+            <p>MALAYSIA AIRLINES FLIGHT MH370 &bull; 8 MARCH 2014 &bull; A CASE WITHOUT A FINAL LOCATION</p>
+            <blockquote class="mot-final-quote">
+              "In conclusion, the team is unable to determine the real cause for the disappearance of MH370."
+              <span>&mdash; Malaysian ICAO Annex 13 Safety Investigation Team Final Report (30 July 2018)</span>
+            </blockquote>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13. SOURCES & BIBLIOGRAPHY ARCHIVE -->
+    <section class="chapter-section" id="sources" data-chapter="13" data-chapter-name="SOURCES">
+      <div class="chapter-content-wrap">
+        <div class="chapter-header-block">
+          <span class="chap-badge">DOCUMENTATION</span>
+          <h2 class="chap-title">VERIFIED SOURCE ARCHIVE</h2>
+          <p class="chap-desc">
+            Primary accident investigation reports, technical papers, defense briefings, and verified news archives cited throughout this investigation.
+          </p>
+        </div>
+
+        <div class="sources-grid" id="sourcesGrid">
+          <!-- Populated dynamically via script.js -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- SOURCE DETAIL SLIDE-OUT DRAWER -->
+  <aside class="source-drawer-panel" id="sourceDrawer" aria-hidden="true">
+    <div class="drawer-header">
+      <span class="drawer-ref-id" id="drawerSourceId">SRC-001</span>
+      <button type="button" class="drawer-close-btn" id="drawerCloseBtn" aria-label="Close source drawer">&times;</button>
+    </div>
+    <div class="drawer-body">
+      <span class="badge badge-doc" id="drawerSourceCategory">OFFICIAL ACCIDENT REPORT</span>
+      <h3 class="drawer-title" id="drawerSourceTitle">MH370 Safety Investigation Report</h3>
+      <div class="drawer-meta-list">
+        <div class="d-meta"><span class="lbl">PUBLISHER:</span> <span id="drawerSourcePub">Ministry of Transport Malaysia</span></div>
+        <div class="d-meta"><span class="lbl">DATE:</span> <span id="drawerSourceDate">30 July 2018</span></div>
+        <div class="d-meta"><span class="lbl">DOCUMENT TYPE:</span> <span id="drawerSourceType">ICAO Annex 13 Report</span></div>
+      </div>
+      <div class="drawer-excerpt">
+        <strong>RELEVANT CASE CONTEXT:</strong>
+        <p id="drawerSourceExcerpt">Context of the official accident finding cited in this section.</p>
+      </div>
+      <div class="drawer-actions">
+        <a href="#" target="_blank" rel="noopener noreferrer" class="btn-drawer-open" id="drawerSourceUrl">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> OPEN VERIFIED SOURCE
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- GLOBAL FOOTER -->
+  <footer class="sky-footer">
+    <div class="footer-wrap">
+      <div class="footer-top">
+        <div class="f-brand">
+          <span class="strobe-blue"></span>
+          <strong>THE BLACK BOX</strong>
+          <span>AN AVIATION INVESTIGATION</span>
+        </div>
+        <div class="f-case">
+          CASE: MH370 &bull; 8 MARCH 2014 &bull; BOEING 777-200ER (9M-MRO)
+        </div>
+      </div>
+
+      <div class="footer-cols">
+        <div class="f-col">
+          <span class="f-title">CASE CHAPTERS</span>
+          <ul>
+            <li><a href="#hero">The Night Sky</a></li>
+            <li><a href="#case">The Case</a></li>
+            <li><a href="#flight">Airway M770</a></li>
+            <li><a href="#last90">The Last 90 Min</a></li>
+            <li><a href="#radar">Primary Radar</a></li>
+          </ul>
+        </div>
+        <div class="f-col">
+          <span class="f-title">OCEAN &amp; SATELLITE</span>
+          <ul>
+            <li><a href="#turn">The Airspace Turn</a></li>
+            <li><a href="#satellite">Inmarsat Pings</a></li>
+            <li><a href="#ocean">Southern Ocean</a></li>
+            <li><a href="#debris">Physical Debris</a></li>
+            <li><a href="#search">Underwater Search</a></li>
+          </ul>
+        </div>
+        <div class="f-col">
+          <span class="f-title">OFFICIAL BODIES</span>
+          <ul>
+            <li><a href="https://www.atsb.gov.au" target="_blank" rel="noopener noreferrer">Australian Transport Safety Bureau</a></li>
+            <li><a href="https://www.mot.gov.my" target="_blank" rel="noopener noreferrer">Ministry of Transport Malaysia</a></li>
+            <li><a href="https://www.icao.int" target="_blank" rel="noopener noreferrer">International Civil Aviation Organization</a></li>
+            <li><a href="https://www.inmarsat.com" target="_blank" rel="noopener noreferrer">Inmarsat Satellite Communications</a></li>
+          </ul>
+        </div>
+        <div class="f-col">
+          <span class="f-title">METHODOLOGY</span>
+          <p class="f-copy">
+            This archive operates under strict evidentiary standards. Theories are clearly classified as Documented, Hypothesis, Disputed, or Unverified. No conspiracy claims are presented as facts.
+          </p>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>ARCHIVE ID: MH370-2014 &bull; OPEN INVESTIGATION</span>
+        <span>EVIDENCE COUNT: 15 &bull; THEORIES EVALUATED: 12 &bull; SOURCES CITED: 20</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- CDN Dependencies: Leaflet, GSAP, ScrollTrigger, Lenis -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+  
+  <script src="script.js"></script>
+</body>
+</html>
