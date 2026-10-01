@@ -6,14 +6,7 @@
 
 ---
 
-## 📌 Repository Name & Description
 
-* **Repository Name:** `the-black-box-mh370`  
-  *(Alternative: `mh370-investigation-archive`)*
-* **Short Description:**  
-  A cinematic, evidence-driven interactive aviation investigation and intelligence archive on the disappearance of Malaysia Airlines Flight MH370. Grounded strictly in official ATSB, Malaysian MOT, Inmarsat, and physical forensic records.
-
----
 
 ## 🌌 Overview & Creative Concept
 
@@ -76,22 +69,7 @@ the-black-box-mh370/
 
 ---
 
-## 🚀 Getting Started
 
-This project is built entirely with **static frontend technologies**—no build steps, Node.js runtime, compilers, or server dependencies required.
-
-### 1. Clone or Download
-```bash
-git clone https://github.com/your-username/the-black-box-mh370.git
-cd the-black-box-mh370
-```
-
-### 2. Run Locally
-Open `index.html` directly in any modern browser:
-* Double-click `index.html` in your file explorer, OR
-* Launch using any local lightweight server (e.g. VS Code Live Server, Python `python -m http.server 8000`, or Caddy).
-
----
 
 ## 📚 Primary Verified Sources Cited
 
@@ -108,14 +86,7 @@ Open `index.html` directly in any modern browser:
 
 ---
 
-## 📷 Media & Image Attribution
 
-All aircraft imagery, wreckage photographs, and search maps utilize verified public domain or Creative Commons assets from [Wikimedia Commons](https://commons.wikimedia.org/):
-* **Boeing 777-200ER (9M-MRO):** Photographed departing Los Angeles International Airport (LAX) in October 2013 by Paul Rowbotham ([CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/)).
-* **Flight Path & Turn Diagram:** Malaysian Department of Civil Aviation (Public Domain).
-* **Debris & Ocean Recovery Visuals:** ATSB, French BEA, and CSIRO marine drift research datasets.
-
----
 
 ## 📄 License & Fair Use
 
